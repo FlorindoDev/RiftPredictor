@@ -19,6 +19,11 @@ def load_config(env_path: str | Path | None = None) -> RiotConfig:
 
     api_key = os.getenv("RIOT_API_KEY")
     platform_region = os.getenv("RIOT_PLATFORM_REGION")
+    
+    if not api_key:
+        raise ValueError("Missing RIOT_API_KEY in environment")
+    if not platform_region:
+        raise ValueError("Missing RIOT_PLATFORM_REGION in environment")
 
     return RiotConfig(
         api_key=api_key,
