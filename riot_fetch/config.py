@@ -1,0 +1,26 @@
+from dataclasses import dataclass
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+@dataclass
+class RiotConfig:
+    api_key: str
+    platform_region: str
+
+
+def load_config(env_path: str | Path | None = None) -> RiotConfig:
+
+    dotenv_path = Path(env_path) if env_path else Path(__file__).resolve().parent.parent / ".env"
+
+    load_dotenv(dotenv_path=dotenv_path)
+
+    api_key = os.getenv("RIOT_API_KEY")
+    platform_region = os.getenv("RIOT_PLATFORM_REGION")
+
+    return RiotConfig(
+        api_key=api_key,
+        platform_region=platform_region.upper(),
+    )
