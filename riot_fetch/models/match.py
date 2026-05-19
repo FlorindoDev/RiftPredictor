@@ -6,6 +6,7 @@ from riotwatcher import LolWatcher
 
 from ..client import create_client
 from ..config import RiotConfig, load_config
+from .giocatore import Giocatore
 from .squadra import Squadra
 
 
@@ -95,6 +96,54 @@ class Match:
             if squadra.win:
                 return squadra
         return None
+
+    def get_giocatore_by_puuid(self, puuid: str) -> Giocatore | None:
+        for squadra in self.squadre:
+            for giocatore in squadra.giocatori:
+                if giocatore.puuid == puuid:
+                    return giocatore
+        return None
+
+    def get_player_by_lane(self, squadra: Squadra, lane: str) -> Giocatore:
+        lane = lane.upper()
+
+        for giocatore in squadra.giocatori:
+            if giocatore.team_position == lane:
+                return giocatore
+
+        raise ValueError(f"Lane {lane} not found in team {squadra.team_id}")
+
+    def get_lane_rank_difference(
+        self,
+        lane: str,
+        queue_type: str = "RANKED_SOLO_5x5",
+    ) -> dict[str, Any]:
+        blue_player = self.get_player_by_lane(self.squadra_blu, lane)
+        red_player = self.get_player_by_lane(self.squadra_rossa, lane)
+
+        blue_rank = blue_player.get_info_player(
+            queue_type=queue_type,
+            config=self.config,
+            client=self.client,
+        )
+        red_rank = red_player.get_info_player(
+            queue_type=queue_type,
+            config=self.config,
+            client=self.client,
+        )
+        blue_rank_number = blue_rank["rank"] if blue_rank else 0
+        red_rank_number = red_rank["rank"] if red_rank else 0
+
+        return {
+            "lane": lane.upper(),
+            "blue_player": blue_player,
+            "red_player": red_player,
+            "blue_rank": blue_rank_number,
+            "red_rank": red_rank_number,
+            "rank_difference": blue_rank_number - red_rank_number,
+            "blue_rank_info": blue_rank,
+            "red_rank_info": red_rank,
+        }
 
 
 def routing_region_for_platform(platform_region: str) -> str:
