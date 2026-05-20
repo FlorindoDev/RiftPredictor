@@ -121,12 +121,12 @@ a {
 }
 
 .micro {
-  width: 132px;
-  height: 54px;
+  width: 96px;
+  height: 38px;
   border-color: rgba(66, 215, 255, 0.72);
   color: var(--cyan);
   background: rgba(7, 30, 50, 0.64);
-  font-size: 13px;
+  font-size: 16px;
 }
 
 main {
@@ -212,18 +212,18 @@ h1 {
 .btn {
   height: 56px;
   padding: 0 30px;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .btn.primary {
-  width: 188px;
+  width: 214px;
   border-color: #e6c372;
   color: #17151a;
   background: var(--gold);
 }
 
 .btn.secondary {
-  width: 268px;
+  width: 338px;
   border-color: rgba(55, 178, 229, 0.62);
   color: var(--cyan);
   background: rgba(6, 20, 36, 0.64);
