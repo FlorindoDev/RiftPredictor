@@ -329,6 +329,14 @@ def load_json(path: Path) -> Any:
         return json.load(file)
 
 
+def try_load_cached_json(path: Path) -> Any | None:
+    try:
+        return load_json(path)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        print(f"Cache JSON non valida, la rigenero: {path} ({exc})")
+        return None
+
+
 def build_url(host: str, path: str, params: dict[str, Any] | None = None) -> str:
     url = f"https://{host}{path}"
     clean_params = {
@@ -376,7 +384,16 @@ def riot_get_json(
         try:
             with urlopen(request, timeout=settings.timeout) as response:
                 payload = response.read().decode("utf-8")
-                return json.loads(payload) if payload else None
+                if not payload:
+                    return None
+                try:
+                    return json.loads(payload)
+                except json.JSONDecodeError as exc:
+                    snippet = payload[:200].replace("\n", "\\n").replace("\r", "\\r")
+                    raise RuntimeError(
+                        f"Risposta non JSON da Riot per {url}: {exc}. "
+                        f"Inizio risposta: {snippet!r}"
+                    ) from exc
         except HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
             if exc.code == 429 and attempt < max_retries:
@@ -574,8 +591,9 @@ def fetch_player_match_ids(
     puuid = player["puuid"]
     player_path = player_match_ids_file(settings, player)
     if player_path.exists():
-        result = load_json(player_path)
-        if cached_match_result_is_current(result, settings):
+        cached_result = try_load_cached_json(player_path)
+        if cached_match_result_is_current(cached_result, settings):
+            result = cached_result
             return result
 
     host = routing_host(settings.routing_region)
