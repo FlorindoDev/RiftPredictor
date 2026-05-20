@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RiftPredictor</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="module" src="./src/main.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div class="shell">
+          <a class="brand-wrap" href="#" aria-label="RiftPredictor home">
+            <span class="brand">RiftPredictor</span>
+          </a>
+
+          <nav class="nav" aria-label="Navigazione principale">
+            <a href="#">Models</a>
+            <a href="#">Architecture</a>
+            <a href="#">Metrics</a>
+            <a href="#">Roadmap</a>
+          </nav>
+
+          <div class="actions">
+            <a class="micro" href="#">GitHub</a>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero shell" aria-labelledby="hero-title">
+          <div class="signal">LIVE ANALYTICS ENGINE</div>
+
+          <div class="hero-grid">
+            <div>
+              <h1 id="hero-title">Nexus Precision: Predici la Vittoria su Summoner&rsquo;s Rift</h1>
+              <p class="lead">
+                Un modello di machine learning avanzato progettato per analizzare milioni di match e prevedere l'esito del gioco in tempo reale. Vantaggio tattico calcolato.
+              </p>
+              <div class="cta">
+                <a class="btn primary" href="#">Inizia a Predire</a>
+                <a class="btn secondary" href="#">Esplora la Documentazione <span aria-hidden="true">-&gt;</span></a>
+              </div>
+            </div>
+
+            <aside class="notice-frame" aria-label="Avviso progetto in sviluppo">
+              <div class="notice-kicker">PROJECT STATUS</div>
+              <h2 class="notice-title">Progetto in fase di creazione</h2>
+              <p class="notice-copy">
+                Quello che vedi ora e' solo una landing page dimostrativa. Le funzioni di predizione, dashboard e integrazione dati sono ancora in sviluppo.
+              </p>
+              <div class="notice-grid" aria-label="Stato moduli">
+                <span>Landing</span>
+                <strong>Online</strong>
+                <span>Predictor</span>
+                <strong>In sviluppo</strong>
+                <span>Data pipeline</span>
+                <strong>In test</strong>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="process shell" aria-labelledby="process-title">
+          <h2 id="process-title">Processo Analitico</h2>
+          <p class="section-copy">Architettura del flusso dati in tre fasi.</p>
+
+          <div class="cards">
+            <article class="card gold">
+              <div class="num">01</div>
+              <svg viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <ellipse cx="40" cy="18" rx="26" ry="10" stroke="currentColor" stroke-width="7" />
+                <path d="M14 18v36c0 6 12 11 26 11s26-5 26-11V18" stroke="currentColor" stroke-width="7" />
+                <path d="M14 36c0 6 12 11 26 11s26-5 26-11" stroke="currentColor" stroke-width="7" />
+                <path d="M14 54c0 6 12 11 26 11s26-5 26-11" stroke="currentColor" stroke-width="7" />
+              </svg>
+              <h3>Raccolta Dati Match</h3>
+              <p>Utilizziamo le API Riot per estrarre dati storici e live da migliaia di partite competitive.</p>
+            </article>
+
+            <article class="card cyan">
+              <div class="num">02</div>
+              <svg viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <rect x="25" y="25" width="30" height="30" stroke="currentColor" stroke-width="8" />
+                <rect x="34" y="34" width="12" height="12" stroke="currentColor" stroke-width="6" />
+                <path d="M16 30h9M16 40h9M16 50h9M55 30h9M55 40h9M55 50h9M30 16v9M40 16v9M50 16v9M30 55v9M40 55v9M50 55v9" stroke="currentColor" stroke-width="7" />
+              </svg>
+              <h3>Feature Extraction</h3>
+              <p>Identifichiamo i parametri critici come KDA, controllo degli obiettivi, gold differential e visione della mappa.</p>
+            </article>
+
+            <article class="card gold">
+              <div class="num">03</div>
+              <svg viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <path d="M54 9l13 13-13 13" stroke="currentColor" stroke-width="8" />
+                <path d="M63 22H41c-15 0-27 12-27 27s12 27 27 27 27-12 27-27" stroke="currentColor" stroke-width="8" />
+                <path d="M43 30l-15 17 14 14 15-18-14-13z" fill="currentColor" />
+              </svg>
+              <h3>Addestramento XGBoost</h3>
+              <p>I dati vengono elaborati da un modello XGBoost ottimizzato per gestire la complessit&agrave; e le interazioni non lineari del gioco.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="shell">
+          <div class="footer-brand">RiftPredictor</div>
+          <p class="copyright">&copy; 2024 RIFTPREDICTOR ANALYTICS. NEURAL NETWORK DATA UPDATED REAL-TIME.</p>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
