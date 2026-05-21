@@ -293,6 +293,34 @@ class Giocatore:
             data=player_data,
         )
 
+    @property
+    def kda(self) -> float:
+        return round((self.kills + self.assists) / max(1, self.deaths), 2)
+
+    def get_champion(
+        self,
+        config: RiotConfig | None = None,
+        client: LolWatcher | None = None,
+    ) -> dict[str, Any]:
+        if not self.puuid:
+            raise ValueError("puuid mancante: impossibile leggere la champion mastery")
+        if not self.champion_id:
+            raise ValueError("champion_id mancante: impossibile leggere la champion mastery")
+
+        riot_config = config or load_config()
+        riot_client = client or create_client(riot_config)
+        mastery = riot_client.champion_mastery.by_puuid_by_champion(
+            riot_config.platform_region,
+            self.puuid,
+            self.champion_id,
+        )
+
+        return {
+            "champion_id": self.champion_id,
+            "champion_name": self.champion_name,
+            "mastery": mastery,
+        }
+
     def get_info_player(
         self,
         queue_type: str = "RANKED_SOLO_5x5",
