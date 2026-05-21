@@ -1,5 +1,4 @@
-from .client import create_client
-from .config import RiotConfig, load_config
+from .client_riot import RiotConfig, create_client, load_config
 from .models import Giocatore, Match, Squadra
 
 __all__ = [

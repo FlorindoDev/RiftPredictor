@@ -5,8 +5,7 @@ from typing import Any
 
 from riotwatcher import LolWatcher
 
-from ..client import create_client
-from ..config import RiotConfig, load_config
+from ..client_riot import RiotConfig, create_client, load_config
 
 
 _PING_FIELDS = (

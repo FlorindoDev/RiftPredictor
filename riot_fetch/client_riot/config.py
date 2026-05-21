@@ -13,13 +13,13 @@ class RiotConfig:
 
 def load_config(env_path: str | Path | None = None) -> RiotConfig:
 
-    dotenv_path = Path(env_path) if env_path else Path(__file__).resolve().parent.parent / ".env"
+    dotenv_path = Path(env_path) if env_path else Path(__file__).resolve().parents[2] / ".env"
 
     load_dotenv(dotenv_path=dotenv_path)
 
     api_key = os.getenv("RIOT_API_KEY")
     platform_region = os.getenv("RIOT_PLATFORM_REGION")
-    
+
     if not api_key:
         raise ValueError("Missing RIOT_API_KEY in environment")
     if not platform_region:
