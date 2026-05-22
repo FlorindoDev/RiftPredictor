@@ -65,13 +65,7 @@ class RiotPlayerService:
         giocatore: Giocatore,
         queue_type: str = "RANKED_SOLO_5x5",
     ) -> dict[str, Any] | None:
-        if not giocatore.summoner_id:
-            raise ValueError("summoner_id mancante: impossibile leggere il rank")
-
-        ranked_entries = self.client.league.by_summoner(
-            self.config.platform_region,
-            giocatore.summoner_id,
-        )
+        ranked_entries = self._get_ranked_entries(giocatore)
 
         for entry in ranked_entries:
             if entry.get("queueType") != queue_type:
@@ -104,3 +98,19 @@ class RiotPlayerService:
             }
 
         return None
+
+    def _get_ranked_entries(self, giocatore: Giocatore) -> list[dict[str, Any]]:
+        
+        if giocatore.puuid:
+            return self.client.league.by_puuid(
+                self.config.platform_region,
+                giocatore.puuid,
+            )
+
+        if giocatore.summoner_id:
+            return self.client.league.by_summoner(
+                self.config.platform_region,
+                giocatore.summoner_id,
+            )
+
+        raise ValueError("puuid e summoner_id mancanti: impossibile leggere il rank")
