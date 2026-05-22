@@ -16,7 +16,7 @@ DATA_DIR = (
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from riot_fetch.models import Utente
+from riot_fetch.services import UtenteService
 
 
 def main() -> None:
@@ -25,17 +25,17 @@ def main() -> None:
     with player_file.open("r", encoding="utf-8") as file:
         data = json.load(file)
 
-    utente = Utente(
+    utente_service = UtenteService(
         player=data["player"],
         match_ids=data["match_ids"],
         match_query=data["match_query"],
     )
 
-    match_id = utente.match_ids[0]
-    stats = utente.get_kda_winrate_ultime_10(match_id)
+    match_id = utente_service.match_ids[0]
+    stats = utente_service.get_kda_winrate_ultime_10(match_id)
 
     print(f"File giocatore: {player_file.name}")
-    print(f"PUUID: {utente.puuid}")
+    print(f"PUUID: {utente_service.puuid}")
     print(f"Match riferimento: {match_id}")
     print(f"Partite usate: {stats['games_count']}")
     print(f"KDA medio ultime 10: {stats['avg_kda']}")

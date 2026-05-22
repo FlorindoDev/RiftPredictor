@@ -3,9 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from riotwatcher import LolWatcher
-
-from ..client_riot import RiotConfig
 from .giocatore import Giocatore
 
 
@@ -63,24 +60,3 @@ class Squadra:
                 return giocatore
 
         raise ValueError(f"Lane {lane} not found in team {self.team_id}")
-
-    def get_rank_player_by_lane(
-        self,
-        lane: str,
-        queue_type: str = "RANKED_SOLO_5x5",
-        config: RiotConfig | None = None,
-        client: LolWatcher | None = None,
-    ) -> dict[str, Any]:
-        player = self.get_player_by_lane(lane)
-        rank_info = player.get_info_player(
-            queue_type=queue_type,
-            config=config,
-            client=client,
-        )
-
-        return {
-            "lane": lane.upper(),
-            "player": player,
-            "rank": rank_info["rank"] if rank_info else 0,
-            "rank_info": rank_info,
-        }

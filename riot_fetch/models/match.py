@@ -112,36 +112,6 @@ class Match:
                     return giocatore
         return None
 
-    def get_lane_rank_difference(
-        self,
-        lane: str,
-        queue_type: str = "RANKED_SOLO_5x5",
-    ) -> dict[str, Any]:
-        
-        blue_rank = self.squadra_blu.get_rank_player_by_lane(
-            lane=lane,
-            queue_type=queue_type,
-            config=self.config,
-            client=self.client,
-        )
-        red_rank = self.squadra_rossa.get_rank_player_by_lane(
-            lane=lane,
-            queue_type=queue_type,
-            config=self.config,
-            client=self.client,
-        )
-
-        return {
-            "lane": lane.upper(),
-            "blue_player": blue_rank["player"],
-            "red_player": red_rank["player"],
-            "blue_rank": blue_rank["rank"],
-            "red_rank": red_rank["rank"],
-            "rank_difference": blue_rank["rank"] - red_rank["rank"],
-            "blue_rank_info": blue_rank["rank_info"],
-            "red_rank_info": red_rank["rank_info"],
-        }
-
 
 def routing_region_for_platform(platform_region: str) -> str:
     region = platform_region.upper()

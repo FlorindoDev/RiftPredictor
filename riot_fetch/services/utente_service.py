@@ -1,58 +1,47 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from riotwatcher import LolWatcher
 
 from ..client_riot import RiotConfig, create_client, load_config
-from .match import Match, routing_region_for_platform
+from ..models.match import Match, routing_region_for_platform
 
 
-@dataclass
-class Utente:
-    player: dict[str, Any]
-    match_ids: list[str]
-    match_query: dict[str, Any]
-
+class UtenteService:
     def __init__(
         self,
         player: dict[str, Any],
         match_ids: list[str],
         match_query: dict[str, Any],
+        config: RiotConfig | None = None,
+        client: LolWatcher | None = None,
     ) -> None:
         self.player = player
         self.match_ids = match_ids
         self.match_query = match_query
+        self.config = config or load_config()
+        self.client = client or create_client(self.config)
         self._match_cache: dict[str, Match] = {}
 
     @property
     def puuid(self) -> str:
         return self.player.get("puuid", "")
 
-    def get_kda_winrate_ultime_10(
-        self,
-        match_id: str,
-        config: RiotConfig | None = None,
-        client: LolWatcher | None = None,
-    ) -> dict[str, Any]:
+    def get_kda_winrate_ultime_10(self, match_id: str) -> dict[str, Any]:
         if not self.puuid:
             raise ValueError("puuid mancante: impossibile calcolare KDA e winrate")
 
-        riot_config = config or load_config()
-        riot_client = client or create_client(riot_config)
         previous_match_ids = self._get_previous_match_ids(
             match_id=match_id,
             count=10,
-            config=riot_config,
-            client=riot_client,
         )
 
         kda_values: list[float] = []
         wins = 0
 
         for previous_match_id in previous_match_ids:
-            match = self._get_match(previous_match_id, riot_config, riot_client)
+            match = self._get_match(previous_match_id)
             giocatore = match.get_giocatore_by_puuid(self.puuid)
 
             if not giocatore:
@@ -74,48 +63,23 @@ class Utente:
             "losses": games_count - wins,
         }
 
-    def get_kda_ultime_10(
-        self,
-        match_id: str,
-        config: RiotConfig | None = None,
-        client: LolWatcher | None = None,
-    ) -> float:
-        stats = self.get_kda_winrate_ultime_10(
-            match_id=match_id,
-            config=config,
-            client=client,
-        )
+    def get_kda_ultime_10(self, match_id: str) -> float:
+        stats = self.get_kda_winrate_ultime_10(match_id=match_id)
         return stats["avg_kda"]
 
-    def get_winrate_ultime_10(
-        self,
-        match_id: str,
-        config: RiotConfig | None = None,
-        client: LolWatcher | None = None,
-    ) -> float:
-        stats = self.get_kda_winrate_ultime_10(
-            match_id=match_id,
-            config=config,
-            client=client,
-        )
+    def get_winrate_ultime_10(self, match_id: str) -> float:
+        stats = self.get_kda_winrate_ultime_10(match_id=match_id)
         return stats["winrate"]
 
-    def _get_previous_match_ids(
-        self,
-        match_id: str,
-        count: int,
-        config: RiotConfig,
-        client: LolWatcher,
-    ) -> list[str]:
+    def _get_previous_match_ids(self, match_id: str, count: int) -> list[str]:
         previous_match_ids = self._get_saved_previous_match_ids(match_id, count)
 
         if len(previous_match_ids) >= count:
             return previous_match_ids
 
-        current_match = self._get_match(match_id, config, client)
-        
-        fetched_match_ids = client.match.matchlist_by_puuid(
-            routing_region_for_platform(config.platform_region),
+        current_match = self._get_match(match_id)
+        fetched_match_ids = self.client.match.matchlist_by_puuid(
+            routing_region_for_platform(self.config.platform_region),
             self.puuid,
             count=count,
             queue=self.match_query.get("match_queue"),
@@ -139,17 +103,12 @@ class Utente:
 
         return self.match_ids[index + 1 : index + 1 + count]
 
-    def _get_match(
-        self,
-        match_id: str,
-        config: RiotConfig,
-        client: LolWatcher,
-    ) -> Match:
+    def _get_match(self, match_id: str) -> Match:
         if match_id not in self._match_cache:
             self._match_cache[match_id] = Match(
                 match_id=match_id,
-                config=config,
-                client=client,
+                config=self.config,
+                client=self.client,
             )
 
         return self._match_cache[match_id]
