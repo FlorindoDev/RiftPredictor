@@ -1,131 +1,191 @@
 from __future__ import annotations
 
-import argparse
+import csv
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from riot_fetch.client_riot import create_client, load_config
+from riot_fetch.services.match_features_service import MatchFeaturesService
+from riot_fetch.services.match_stats_service import MatchStatsService
+from riot_fetch.services.riot_player_service import RiotPlayerService
+from riot_fetch.services.utente_service import UtenteService
+
+
 DATA_DIR = (
     PROJECT_ROOT
     / "data"
     / "riot_ladder_20260519_212022"
     / "match_ids_by_tier"
-    / "IRON"
 )
 
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+CSV_PATH = PROJECT_ROOT / "data" / "match_features.csv"
+TEAM_POSITIONS = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
-from riot_fetch.client_riot import create_client, load_config
-from riot_fetch.models import Match
-from riot_fetch.services import MatchStatsService, RiotPlayerService, UtenteService
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Test manuale dei service Riot su un file giocatore locale.",
-    )
-    parser.add_argument(
-        "--history",
-        action="store_true",
-        help="Calcola anche KDA e winrate sulle ultime 10 partite.",
-    )
-    parser.add_argument(
-        "--lane",
-        help="Lane da usare per la differenza rank. Default: lane del giocatore.",
-    )
-    return parser.parse_args()
-
-
-def _get_first_player_file() -> Path:
-    player_files = sorted(DATA_DIR.glob("*.json"))
-    if not player_files:
-        raise FileNotFoundError(f"Nessun file giocatore trovato in {DATA_DIR}")
-
-    return player_files[0]
-
-
-def _format_rank(rank_info: dict[str, Any] | None) -> str:
-    if not rank_info:
-        return "Unranked"
-
-    return (
-        f"{rank_info['rank_nome']} "
-        f"({rank_info['league_points']} LP, score {rank_info['rank']})"
-    )
+CSV_FIELDNAMES = [
+    "recent_match_count",
+    "recent_avg_kda",
+    "avg_rank_difference_player_team_vs_enemy",
+    "avg_player_team_winrate",
+    "avg_enemy_winrate",
+    "ally_top_champion",
+    "ally_top_champion_mastery",
+    "ally_jungle_champion",
+    "ally_jungle_champion_mastery",
+    "ally_middle_champion",
+    "ally_middle_champion_mastery",
+    "ally_bottom_champion",
+    "ally_bottom_champion_mastery",
+    "ally_utility_champion",
+    "ally_utility_champion_mastery",
+    "enemy_top_champion",
+    "enemy_top_champion_mastery",
+    "enemy_jungle_champion",
+    "enemy_jungle_champion_mastery",
+    "enemy_middle_champion",
+    "enemy_middle_champion_mastery",
+    "enemy_bottom_champion",
+    "enemy_bottom_champion_mastery",
+    "enemy_utility_champion",
+    "enemy_utility_champion_mastery",
+]
 
 
-def main() -> None:
-    args = parse_args()
-    player_file = _get_first_player_file()
+def load_match_files() -> list[tuple[Path, dict[str, Any]]]:
+    json_files = sorted(DATA_DIR.rglob("*.json"))
+    if not json_files:
+        raise FileNotFoundError(f"Nessun file JSON trovato in {DATA_DIR}")
 
-    with player_file.open("r", encoding="utf-8") as file:
-        data = json.load(file)
+    files = []
+    for file_path in json_files:
+        with file_path.open("r", encoding="utf-8") as file:
+            files.append((file_path, json.load(file)))
 
+    return files
+
+
+def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
+    personal_features = features["personal_features"]
+    recent_stats = personal_features["recent_stats"]
+    team_features = features["team_features"]
+    enemy_features = features["enemy_features"]
+
+    row = {
+        "recent_match_count": personal_features["recent_match_count"],
+        "recent_avg_kda": recent_stats["avg_kda"],
+        "avg_rank_difference_player_team_vs_enemy": team_features[
+            "avg_player_team_minus_enemy"
+        ],
+        "avg_player_team_winrate": team_features["avg_winrate"],
+        "avg_enemy_winrate": enemy_features["avg_winrate"],
+    }
+
+    allies_by_position = {
+        ally["team_position"].upper(): ally
+        for ally in team_features["composition"]
+    }
+    for position in TEAM_POSITIONS:
+        ally = allies_by_position.get(position, {})
+        column_prefix = position.lower()
+        row[f"ally_{column_prefix}_champion"] = ally.get("champion_name", "")
+        row[f"ally_{column_prefix}_champion_mastery"] = ally.get(
+            "champion_mastery",
+            0,
+        )
+
+    enemies_by_position = {
+        enemy["team_position"].upper(): enemy
+        for enemy in enemy_features["composition"]
+    }
+    for position in TEAM_POSITIONS:
+        enemy = enemies_by_position.get(position, {})
+        column_prefix = position.lower()
+        row[f"enemy_{column_prefix}_champion"] = enemy.get("champion_name", "")
+        row[f"enemy_{column_prefix}_champion_mastery"] = enemy.get(
+            "champion_mastery",
+            0,
+        )
+
+    return row
+
+
+def write_features_to_csv(
+    features: dict[str, Any],
+    csv_path: Path = CSV_PATH,
+) -> Path:
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+
+    with csv_path.open("a", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=CSV_FIELDNAMES)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(build_csv_row(features))
+
+    return csv_path
+
+
+def main() -> dict[str, Any]:
     config = load_config()
     client = create_client(config)
 
-    utente_service = UtenteService(
-        player=data["player"],
-        match_ids=data["match_ids"],
-        match_query=data["match_query"],
-        config=config,
-        client=client,
-    )
-    riot_player_service = RiotPlayerService(config=config, client=client)
+    player_service = RiotPlayerService(config=config, client=client)
     match_stats_service = MatchStatsService(
         config=config,
         client=client,
-        riot_player_service=riot_player_service,
+        riot_player_service=player_service,
+    )
+    match_features_service = MatchFeaturesService(
+        match_stats_service=match_stats_service,
     )
 
-    match_id = utente_service.match_ids[0]
-    match = Match(match_id=match_id, config=config, client=client)
-    giocatore = match.get_giocatore_by_puuid(utente_service.puuid)
+    processed_files = 0
+    processed_matches = 0
 
-    if not giocatore:
-        raise ValueError(f"Giocatore {utente_service.puuid} non trovato in {match_id}")
+    for file_path, data in load_match_files():
+        match_ids = data.get("match_ids", [])
+        if not match_ids:
+            continue
 
-    champion = riot_player_service.get_champion(giocatore)
-    lane = args.lane or giocatore.team_position
-    lane_rank_difference = match_stats_service.get_lane_rank_difference(
-        match=match,
-        lane=lane,
-    )
-    player_rank_info = (
-        lane_rank_difference["blue_rank_info"]
-        if giocatore.team_id == 100
-        else lane_rank_difference["red_rank_info"]
-    )
-    mastery = champion["mastery"]
-    rank_label = (
-        "Rank player"
-        if lane.upper() == giocatore.team_position
-        else f"Rank {lane.upper()} team player"
-    )
+        puuid = data["puuid"]
+        utente_service = UtenteService(
+            player=data["player"],
+            match_ids=match_ids,
+            match_query=data.get("match_query", {}),
+            config=config,
+            client=client,
+        )
 
-    print(f"File giocatore: {player_file.name}")
-    print(f"PUUID: {utente_service.puuid}")
-    print(f"Match riferimento: {match_id}")
-    print(f"Champion: {giocatore.champion_name}")
-    print(f"Lane: {lane}")
-    print(f"{rank_label}: {_format_rank(player_rank_info)}")
-    print(f"Champion mastery level: {mastery.get('championLevel', 0)}")
-    print(f"Champion mastery points: {mastery.get('championPoints', 0)}")
-    print(
-        "Differenza rank lane: "
-        f"{lane_rank_difference['rank_difference']} "
-        f"(blue {lane_rank_difference['blue_rank']}, "
-        f"red {lane_rank_difference['red_rank']})"
-    )
+        for match_id in match_ids:
+            match = match_stats_service.get_match(match_id)
+            player_team = match.get_squadra_by_puuid(puuid)
+            enemy_team = match.get_squadra_avversaria(player_team)
+            rank_differences = match_stats_service.get_lane_rank_differences(match)
 
-    if args.history:
-        stats = utente_service.get_kda_winrate_ultime_10(match_id)
-        print(f"Partite usate: {stats['games_count']}")
-        print(f"KDA medio ultime 10: {stats['avg_kda']}")
-        print(f"Winrate ultime 10: {stats['winrate']}%")
+            features = match_features_service.build_features(
+                utente_service=utente_service,
+                match=match,
+                puuid=puuid,
+                rank_differences=rank_differences,
+                player_team=player_team,
+                enemy_team=enemy_team,
+                file_path=file_path,
+            )
+            write_features_to_csv(features)
+            processed_matches += 1
+
+        processed_files += 1
+
+    return {
+        "processed_files": processed_files,
+        "processed_matches": processed_matches,
+        "csv_path": CSV_PATH,
+    }
 
 
 if __name__ == "__main__":

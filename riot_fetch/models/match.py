@@ -112,6 +112,20 @@ class Match:
                     return giocatore
         return None
 
+    def get_squadra_by_puuid(self, puuid: str) -> Squadra:
+        for squadra in self.squadre:
+            if squadra.get_giocatore_by_puuid(puuid):
+                return squadra
+
+        raise ValueError(f"Giocatore {puuid} non trovato nel match {self.match_id}")
+
+    def get_squadra_avversaria(self, squadra: Squadra) -> Squadra:
+        for match_team in self.squadre:
+            if match_team.team_id != squadra.team_id:
+                return match_team
+
+        raise ValueError(f"Team avversario non trovato nel match {self.match_id}")
+
 
 def routing_region_for_platform(platform_region: str) -> str:
     region = platform_region.upper()

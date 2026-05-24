@@ -6,6 +6,7 @@ from riotwatcher import LolWatcher
 
 from ..client_riot import RiotConfig, create_client, load_config
 from ..models.giocatore import Giocatore
+from ..models.squadra import Squadra
 
 
 RANK_TIERS = {
@@ -60,6 +61,21 @@ class RiotPlayerService:
             "mastery": mastery,
         }
 
+    def get_team_composition(self, squadra: Squadra) -> list[dict[str, Any]]:
+        composition = []
+        for giocatore in squadra.giocatori:
+            champion_mastery = self.get_champion(giocatore)["mastery"]
+            composition.append(
+                {
+                    "team_position": giocatore.team_position,
+                    "champion_name": giocatore.champion_name,
+                    "role": giocatore.role,
+                    "champion_mastery": champion_mastery.get("championLevel", 0),
+                }
+            )
+
+        return composition
+
     def get_info_player(
         self,
         giocatore: Giocatore,
@@ -83,6 +99,10 @@ class RiotPlayerService:
             if tier_numero and divisione_numero:
                 rank = ((tier_numero - 1) * 4) + (5 - divisione_numero)
 
+            wins = entry.get("wins", 0)
+            losses = entry.get("losses", 0)
+            games_count = wins + losses
+
             return {
                 "queue_type": entry.get("queueType", queue_type),
                 "tier": tier,
@@ -92,8 +112,9 @@ class RiotPlayerService:
                 "rank": rank,
                 "rank_nome": f"{tier} {divisione}".strip(),
                 "league_points": entry.get("leaguePoints", 0),
-                "wins": entry.get("wins", 0),
-                "losses": entry.get("losses", 0),
+                "wins": wins,
+                "losses": losses,
+                "winrate": round((wins / games_count) * 100, 2) if games_count else 0,
                 "data": entry,
             }
 
