@@ -28,31 +28,39 @@ CSV_PATH = PROJECT_ROOT / "data" / "match_features.csv"
 TEAM_POSITIONS = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
 CSV_FIELDNAMES = [
-    "recent_match_count",
-    "recent_avg_kda",
     "avg_rank_difference_player_team_vs_enemy",
     "avg_player_team_winrate",
     "avg_enemy_winrate",
     "ally_top_champion",
     "ally_top_champion_mastery",
+    "ally_top_kda",
     "ally_jungle_champion",
     "ally_jungle_champion_mastery",
+    "ally_jungle_kda",
     "ally_middle_champion",
     "ally_middle_champion_mastery",
+    "ally_middle_kda",
     "ally_bottom_champion",
     "ally_bottom_champion_mastery",
+    "ally_bottom_kda",
     "ally_utility_champion",
     "ally_utility_champion_mastery",
+    "ally_utility_kda",
     "enemy_top_champion",
     "enemy_top_champion_mastery",
+    "enemy_top_kda",
     "enemy_jungle_champion",
     "enemy_jungle_champion_mastery",
+    "enemy_jungle_kda",
     "enemy_middle_champion",
     "enemy_middle_champion_mastery",
+    "enemy_middle_kda",
     "enemy_bottom_champion",
     "enemy_bottom_champion_mastery",
+    "enemy_bottom_kda",
     "enemy_utility_champion",
     "enemy_utility_champion_mastery",
+    "enemy_utility_kda",
 ]
 
 
@@ -71,13 +79,10 @@ def load_match_files() -> list[tuple[Path, dict[str, Any]]]:
 
 def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
     personal_features = features["personal_features"]
-    recent_stats = personal_features["recent_stats"]
     team_features = features["team_features"]
     enemy_features = features["enemy_features"]
 
     row = {
-        "recent_match_count": personal_features["recent_match_count"],
-        "recent_avg_kda": recent_stats["avg_kda"],
         "avg_rank_difference_player_team_vs_enemy": team_features[
             "avg_player_team_minus_enemy"
         ],
@@ -97,6 +102,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
             "champion_mastery",
             0,
         )
+        row[f"ally_{column_prefix}_kda"] = ally.get("kda", 0)
 
     enemies_by_position = {
         enemy["team_position"].upper(): enemy
@@ -110,6 +116,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
             "champion_mastery",
             0,
         )
+        row[f"enemy_{column_prefix}_kda"] = enemy.get("kda", 0)
 
     return row
 

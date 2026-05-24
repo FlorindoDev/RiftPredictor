@@ -101,7 +101,6 @@ class RiotPlayerService:
 
             wins = entry.get("wins", 0)
             losses = entry.get("losses", 0)
-            games_count = wins + losses
 
             return {
                 "queue_type": entry.get("queueType", queue_type),
@@ -114,7 +113,6 @@ class RiotPlayerService:
                 "league_points": entry.get("leaguePoints", 0),
                 "wins": wins,
                 "losses": losses,
-                "winrate": round((wins / games_count) * 100, 2) if games_count else 0,
                 "data": entry,
             }
 
