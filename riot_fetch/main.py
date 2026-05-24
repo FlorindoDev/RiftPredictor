@@ -163,17 +163,10 @@ def main() -> dict[str, Any]:
 
         for match_id in match_ids:
             match = match_stats_service.get_match(match_id)
-            player_team = match.get_squadra_by_puuid(puuid)
-            enemy_team = match.get_squadra_avversaria(player_team)
-            rank_differences = match_stats_service.get_lane_rank_differences(match)
-
             features = match_features_service.build_features(
                 utente_service=utente_service,
                 match=match,
                 puuid=puuid,
-                rank_differences=rank_differences,
-                player_team=player_team,
-                enemy_team=enemy_team,
                 file_path=file_path,
             )
             write_features_to_csv(features)

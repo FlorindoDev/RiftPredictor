@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 from ..models.match import Match
-from ..models.squadra import Squadra
 from .match_stats_service import MatchStatsService
 from .utente_service import UtenteService
 
@@ -26,11 +25,14 @@ class MatchFeaturesService:
         utente_service: UtenteService,
         match: Match,
         puuid: str,
-        rank_differences: list[dict[str, Any]],
-        player_team: Squadra,
-        enemy_team: Squadra,
         file_path: Path | None = None,
     ) -> dict[str, Any]:
+        
+        
+        player_team = match.get_squadra_by_puuid(puuid)
+        enemy_team = match.get_squadra_avversaria(player_team)
+        rank_differences = self.match_stats_service.get_lane_rank_differences(match)
+
         features = {
             "personal_features": self.build_personal_features(
                 utente_service=utente_service,
