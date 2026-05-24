@@ -213,7 +213,7 @@ class MatchFeaturesService:
 
         return {
             "player": player,
-            "champion_name": player.champion_name,
+            "champion_id": player.champion_id,
             "recent_match_count": self.recent_match_count,
             "recent_stats": recent_stats,
         }

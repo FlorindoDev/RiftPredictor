@@ -31,34 +31,34 @@ CSV_FIELDNAMES = [
     "avg_rank_difference_player_team_vs_enemy",
     "avg_player_team_winrate",
     "avg_enemy_winrate",
-    "ally_top_champion",
+    "ally_top_champion_id",
     "ally_top_champion_mastery",
     "ally_top_kda",
-    "ally_jungle_champion",
+    "ally_jungle_champion_id",
     "ally_jungle_champion_mastery",
     "ally_jungle_kda",
-    "ally_middle_champion",
+    "ally_middle_champion_id",
     "ally_middle_champion_mastery",
     "ally_middle_kda",
-    "ally_bottom_champion",
+    "ally_bottom_champion_id",
     "ally_bottom_champion_mastery",
     "ally_bottom_kda",
-    "ally_utility_champion",
+    "ally_utility_champion_id",
     "ally_utility_champion_mastery",
     "ally_utility_kda",
-    "enemy_top_champion",
+    "enemy_top_champion_id",
     "enemy_top_champion_mastery",
     "enemy_top_kda",
-    "enemy_jungle_champion",
+    "enemy_jungle_champion_id",
     "enemy_jungle_champion_mastery",
     "enemy_jungle_kda",
-    "enemy_middle_champion",
+    "enemy_middle_champion_id",
     "enemy_middle_champion_mastery",
     "enemy_middle_kda",
-    "enemy_bottom_champion",
+    "enemy_bottom_champion_id",
     "enemy_bottom_champion_mastery",
     "enemy_bottom_kda",
-    "enemy_utility_champion",
+    "enemy_utility_champion_id",
     "enemy_utility_champion_mastery",
     "enemy_utility_kda",
     "target",
@@ -99,7 +99,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
     for position in TEAM_POSITIONS:
         ally = allies_by_position.get(position, {})
         column_prefix = position.lower()
-        row[f"ally_{column_prefix}_champion"] = ally.get("champion_name", "")
+        row[f"ally_{column_prefix}_champion_id"] = ally.get("champion_id", 0)
         row[f"ally_{column_prefix}_champion_mastery"] = ally.get(
             "champion_mastery",
             0,
@@ -113,7 +113,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
     for position in TEAM_POSITIONS:
         enemy = enemies_by_position.get(position, {})
         column_prefix = position.lower()
-        row[f"enemy_{column_prefix}_champion"] = enemy.get("champion_name", "")
+        row[f"enemy_{column_prefix}_champion_id"] = enemy.get("champion_id", 0)
         row[f"enemy_{column_prefix}_champion_mastery"] = enemy.get(
             "champion_mastery",
             0,

@@ -68,7 +68,7 @@ class RiotPlayerService:
             composition.append(
                 {
                     "team_position": giocatore.team_position,
-                    "champion_name": giocatore.champion_name,
+                    "champion_id": giocatore.champion_id,
                     "role": giocatore.role,
                     "champion_mastery": champion_mastery.get("championLevel", 0),
                 }
