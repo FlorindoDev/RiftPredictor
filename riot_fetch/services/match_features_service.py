@@ -39,6 +39,7 @@ class MatchFeaturesService:
         rank_differences = self.match_stats_service.get_lane_rank_differences(
             match,
             players_recent_stats=players_recent_stats,
+            queue_type=utente_service.player["queueType"]
         )
 
         features = {
