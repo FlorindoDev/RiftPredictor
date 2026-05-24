@@ -61,6 +61,7 @@ CSV_FIELDNAMES = [
     "enemy_utility_champion",
     "enemy_utility_champion_mastery",
     "enemy_utility_kda",
+    "target",
 ]
 
 
@@ -88,6 +89,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         ],
         "avg_player_team_winrate": team_features["avg_winrate"],
         "avg_enemy_winrate": enemy_features["avg_winrate"],
+        "target": team_features["win"],
     }
 
     allies_by_position = {
