@@ -160,31 +160,50 @@ def main() -> dict[str, Any]:
 
     processed_files = 0
     processed_matches = 0
+    skipped_files = 0
+    skipped_matches = 0
 
     for file_path, data in load_match_files():
-        match_ids = data.get("match_ids", [])
-        if not match_ids:
+        try:
+            match_ids = data.get("match_ids", [])
+            if not match_ids:
+                continue
+
+            puuid = data["puuid"]
+            utente_service = UtenteService(
+                player=data["player"],
+                match_ids=match_ids,
+                match_query=data.get("match_query", {}),
+                config=config,
+                client=client,
+                match_stats_service=match_stats_service,
+            )
+        except (KeyError, TypeError) as exc:
+            skipped_files += 1
+            print(f"Skip file {file_path}: dati mancanti o invalidi ({exc})")
             continue
 
-        puuid = data["puuid"]
-        utente_service = UtenteService(
-            player=data["player"],
-            match_ids=match_ids,
-            match_query=data.get("match_query", {}),
-            config=config,
-            client=client,
-            match_stats_service=match_stats_service,
-        )
-
         for match_id in match_ids:
-            match = match_stats_service.get_match(match_id)
-            features = match_features_service.build_features(
-                utente_service=utente_service,
-                match=match,
-                puuid=puuid,
-                file_path=file_path,
-            )
-            write_features_to_csv(features)
+            try:
+                match = match_stats_service.get_match(match_id)
+                features = match_features_service.build_features(
+                    utente_service=utente_service,
+                    match=match,
+                    puuid=puuid,
+                    file_path=file_path,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                skipped_matches += 1
+                print(f"Skip match {match_id}: dati mancanti o invalidi ({exc})")
+                continue
+
+            try:
+                write_features_to_csv(features)
+            except (KeyError, TypeError) as exc:
+                skipped_matches += 1
+                print(f"Skip match {match_id}: feature incomplete ({exc})")
+                continue
+
             processed_matches += 1
 
         processed_files += 1
@@ -192,6 +211,8 @@ def main() -> dict[str, Any]:
     return {
         "processed_files": processed_files,
         "processed_matches": processed_matches,
+        "skipped_files": skipped_files,
+        "skipped_matches": skipped_matches,
         "csv_path": CSV_PATH,
     }
 
