@@ -28,38 +28,30 @@ CSV_PATH = PROJECT_ROOT / "data" / "match_features.csv"
 TEAM_POSITIONS = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
 CSV_FIELDNAMES = [
+    "match_id",
+    "puuid",
     "avg_rank_difference_player_team_vs_enemy",
     "avg_player_team_winrate",
     "avg_enemy_winrate",
     "ally_top_champion_id",
-    "ally_top_champion_mastery",
     "ally_top_kda",
     "ally_jungle_champion_id",
-    "ally_jungle_champion_mastery",
     "ally_jungle_kda",
     "ally_middle_champion_id",
-    "ally_middle_champion_mastery",
     "ally_middle_kda",
     "ally_bottom_champion_id",
-    "ally_bottom_champion_mastery",
     "ally_bottom_kda",
     "ally_utility_champion_id",
-    "ally_utility_champion_mastery",
     "ally_utility_kda",
     "enemy_top_champion_id",
-    "enemy_top_champion_mastery",
     "enemy_top_kda",
     "enemy_jungle_champion_id",
-    "enemy_jungle_champion_mastery",
     "enemy_jungle_kda",
     "enemy_middle_champion_id",
-    "enemy_middle_champion_mastery",
     "enemy_middle_kda",
     "enemy_bottom_champion_id",
-    "enemy_bottom_champion_mastery",
     "enemy_bottom_kda",
     "enemy_utility_champion_id",
-    "enemy_utility_champion_mastery",
     "enemy_utility_kda",
     "target",
 ]
@@ -84,6 +76,8 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
     enemy_features = features["enemy_features"]
 
     row = {
+        "match_id": personal_features["match_id"],
+        "puuid": personal_features["puuid"],
         "avg_rank_difference_player_team_vs_enemy": team_features[
             "avg_player_team_minus_enemy"
         ],
@@ -100,10 +94,6 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         ally = allies_by_position.get(position, {})
         column_prefix = position.lower()
         row[f"ally_{column_prefix}_champion_id"] = ally.get("champion_id", 0)
-        row[f"ally_{column_prefix}_champion_mastery"] = ally.get(
-            "champion_mastery",
-            0,
-        )
         row[f"ally_{column_prefix}_kda"] = ally.get("kda", 0)
 
     enemies_by_position = {
@@ -114,10 +104,6 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         enemy = enemies_by_position.get(position, {})
         column_prefix = position.lower()
         row[f"enemy_{column_prefix}_champion_id"] = enemy.get("champion_id", 0)
-        row[f"enemy_{column_prefix}_champion_mastery"] = enemy.get(
-            "champion_mastery",
-            0,
-        )
         row[f"enemy_{column_prefix}_kda"] = enemy.get("kda", 0)
 
     return row
@@ -129,6 +115,15 @@ def write_features_to_csv(
 ) -> Path:
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+
+    if not write_header:
+        with csv_path.open("r", encoding="utf-8", newline="") as file:
+            existing_header = next(csv.reader(file), [])
+        if existing_header != CSV_FIELDNAMES:
+            raise ValueError(
+                f"Schema CSV esistente non compatibile con le feature attuali: "
+                f"{csv_path}"
+            )
 
     with csv_path.open("a", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=CSV_FIELDNAMES)
@@ -168,6 +163,7 @@ def main() -> dict[str, Any]:
             match_query=data.get("match_query", {}),
             config=config,
             client=client,
+            match_stats_service=match_stats_service,
         )
 
         for match_id in match_ids:

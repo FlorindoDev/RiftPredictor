@@ -5,6 +5,7 @@ from typing import Any
 from riotwatcher import LolWatcher
 
 from ..client_riot import RiotConfig, create_client, load_config
+from ..client_riot.constants import routing_region_for_platform
 from ..models.match import Match
 from ..models.squadra import Squadra
 from .riot_player_service import RiotPlayerService
@@ -26,9 +27,20 @@ class MatchStatsService:
             config=self.config,
             client=self.client,
         )
+        self._match_cache: dict[str, Match] = {}
 
     def get_match(self, match_id: str) -> Match:
-        return Match(match_id=match_id, config=self.config, client=self.client)
+        if match_id not in self._match_cache:
+            match_data = self.client.match.by_id(
+                routing_region_for_platform(self.config.platform_region),
+                match_id,
+            )
+            self._match_cache[match_id] = Match.from_data(
+                data=match_data,
+                match_id=match_id,
+            )
+
+        return self._match_cache[match_id]
 
     def get_rank_player_by_lane(
         self,

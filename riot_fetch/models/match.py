@@ -2,51 +2,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from riotwatcher import LolWatcher
-
-from ..client_riot import RiotConfig, create_client, load_config
 from .giocatore import Giocatore
 from .squadra import Squadra
-
-
-_PLATFORM_TO_ROUTING_REGION = {
-    "BR1": "AMERICAS",
-    "LA1": "AMERICAS",
-    "LA2": "AMERICAS",
-    "NA1": "AMERICAS",
-    "EUN1": "EUROPE",
-    "EUW1": "EUROPE",
-    "RU": "EUROPE",
-    "TR1": "EUROPE",
-    "JP1": "ASIA",
-    "KR": "ASIA",
-    "OC1": "SEA",
-    "PH2": "SEA",
-    "SG2": "SEA",
-    "TH2": "SEA",
-    "TW2": "SEA",
-    "VN2": "SEA",
-}
-_ROUTING_REGIONS = {"AMERICAS", "ASIA", "EUROPE", "SEA"}
 
 
 class Match:
     def __init__(
         self,
-        match_id: str,
-        config: RiotConfig | None = None,
-        client: LolWatcher | None = None,
+        data: dict[str, Any],
+        match_id: str | None = None,
     ) -> None:
-        self.config = config or load_config()
-        self.client = client or create_client(self.config)
-        self.data = self.client.match.by_id(
-            routing_region_for_platform(self.config.platform_region),
-            match_id,
-        )
-
+        self.data = data
         self.metadata = self.data.get("metadata", {})
         self.info = self.data.get("info", {})
-        self.match_id = self.metadata.get("matchId", match_id)
+        self.match_id = self.metadata.get("matchId", match_id or "")
         self.queue_id = self.info.get("queueId")
         self.squadre = self._build_squadre()
         self.squadra_blu = self._get_squadra(100)
@@ -55,6 +24,14 @@ class Match:
         self.vincitore_team_id = (
             self.squadra_vincitrice.team_id if self.squadra_vincitrice else None
         )
+
+    @classmethod
+    def from_data(
+        cls,
+        data: dict[str, Any],
+        match_id: str | None = None,
+    ) -> Match:
+        return cls(data=data, match_id=match_id)
 
     def _build_squadre(self) -> list[Squadra]:
         participants = self.info.get("participants", [])
@@ -125,14 +102,3 @@ class Match:
                 return match_team
 
         raise ValueError(f"Team avversario non trovato nel match {self.match_id}")
-
-
-def routing_region_for_platform(platform_region: str) -> str:
-    region = platform_region.upper()
-    if region in _ROUTING_REGIONS:
-        return region
-
-    try:
-        return _PLATFORM_TO_ROUTING_REGION[region]
-    except KeyError as exc:
-        raise ValueError(f"Unsupported Riot platform region: {platform_region}") from exc

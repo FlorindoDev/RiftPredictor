@@ -64,13 +64,11 @@ class RiotPlayerService:
     def get_team_composition(self, squadra: Squadra) -> list[dict[str, Any]]:
         composition = []
         for giocatore in squadra.giocatori:
-            champion_mastery = self.get_champion(giocatore)["mastery"]
             composition.append(
                 {
                     "team_position": giocatore.team_position,
                     "champion_id": giocatore.champion_id,
                     "role": giocatore.role,
-                    "champion_mastery": champion_mastery.get("championLevel", 0),
                 }
             )
 

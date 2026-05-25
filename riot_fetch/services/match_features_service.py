@@ -83,6 +83,7 @@ class MatchFeaturesService:
                         match_query=utente_service.match_query,
                         config=utente_service.config,
                         client=utente_service.client,
+                        match_stats_service=utente_service.match_stats_service,
                     )
 
                 players_recent_stats[player.puuid] = (
@@ -213,6 +214,8 @@ class MatchFeaturesService:
             recent_stats = utente_service.get_kda_winrate_ultime_10(match.match_id)
 
         return {
+            "match_id": match.match_id,
+            "puuid": puuid,
             "player": player,
             "champion_id": player.champion_id,
             "recent_match_count": self.recent_match_count,

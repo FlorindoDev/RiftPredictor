@@ -5,7 +5,9 @@ from typing import Any
 from riotwatcher import LolWatcher
 
 from ..client_riot import RiotConfig, create_client, load_config
-from ..models.match import Match, routing_region_for_platform
+from ..client_riot.constants import routing_region_for_platform
+from ..models.match import Match
+from .match_stats_service import MatchStatsService
 
 
 class UtenteService:
@@ -16,12 +18,17 @@ class UtenteService:
         match_query: dict[str, Any],
         config: RiotConfig | None = None,
         client: LolWatcher | None = None,
+        match_stats_service: MatchStatsService | None = None,
     ) -> None:
         self.player = player
         self.match_ids = match_ids
         self.match_query = match_query
         self.config = config or load_config()
         self.client = client or create_client(self.config)
+        self.match_stats_service = match_stats_service or MatchStatsService(
+            config=self.config,
+            client=self.client,
+        )
         self._match_cache: dict[str, Match] = {}
 
     @property
@@ -105,11 +112,7 @@ class UtenteService:
 
     def _get_match(self, match_id: str) -> Match:
         if match_id not in self._match_cache:
-            self._match_cache[match_id] = Match(
-                match_id=match_id,
-                config=self.config,
-                client=self.client,
-            )
+            self._match_cache[match_id] = self.match_stats_service.get_match(match_id)
 
         return self._match_cache[match_id]
 
