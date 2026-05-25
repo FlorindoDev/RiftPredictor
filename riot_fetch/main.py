@@ -39,24 +39,34 @@ CSV_FIELDNAMES = [
     "enemy_rank_missing_count",
     "ally_top_champion_id",
     "ally_top_kda",
+    "ally_top_winrate",
     "ally_jungle_champion_id",
     "ally_jungle_kda",
+    "ally_jungle_winrate",
     "ally_middle_champion_id",
     "ally_middle_kda",
+    "ally_middle_winrate",
     "ally_bottom_champion_id",
     "ally_bottom_kda",
+    "ally_bottom_winrate",
     "ally_utility_champion_id",
     "ally_utility_kda",
+    "ally_utility_winrate",
     "enemy_top_champion_id",
     "enemy_top_kda",
+    "enemy_top_winrate",
     "enemy_jungle_champion_id",
     "enemy_jungle_kda",
+    "enemy_jungle_winrate",
     "enemy_middle_champion_id",
     "enemy_middle_kda",
+    "enemy_middle_winrate",
     "enemy_bottom_champion_id",
     "enemy_bottom_kda",
+    "enemy_bottom_winrate",
     "enemy_utility_champion_id",
     "enemy_utility_kda",
+    "enemy_utility_winrate",
     "target",
 ]
 
@@ -103,6 +113,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         column_prefix = position.lower()
         row[f"ally_{column_prefix}_champion_id"] = ally.get("champion_id", 0)
         row[f"ally_{column_prefix}_kda"] = ally.get("kda", 0)
+        row[f"ally_{column_prefix}_winrate"] = ally.get("winrate", 0)
 
     enemies_by_position = {
         enemy["team_position"].upper(): enemy
@@ -113,6 +124,7 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         column_prefix = position.lower()
         row[f"enemy_{column_prefix}_champion_id"] = enemy.get("champion_id", 0)
         row[f"enemy_{column_prefix}_kda"] = enemy.get("kda", 0)
+        row[f"enemy_{column_prefix}_winrate"] = enemy.get("winrate", 0)
 
     return row
 
