@@ -31,7 +31,6 @@ CSV_FIELDNAMES = [
     "match_id",
     "puuid",
     "avg_rank_difference_player_team_vs_enemy",
-    "rank_comparison_count",
     "avg_player_team_winrate",
     "avg_enemy_winrate",
     "ally_ranked_count",
@@ -86,7 +85,6 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         "avg_rank_difference_player_team_vs_enemy": team_features[
             "avg_player_team_minus_enemy"
         ],
-        "rank_comparison_count": team_features["rank_comparison_count"],
         "avg_player_team_winrate": team_features["avg_winrate"],
         "avg_enemy_winrate": enemy_features["avg_winrate"],
         "ally_ranked_count": team_features["ranked_count"],
