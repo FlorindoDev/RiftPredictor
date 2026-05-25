@@ -47,6 +47,31 @@ QUEUE_TO_MATCH_QUEUE = {
     "RANKED_FLEX_SR": 440,
 }
 
+RANK_TIERS = {
+    "IRON": 1,
+    "BRONZE": 2,
+    "SILVER": 3,
+    "GOLD": 4,
+    "PLATINUM": 5,
+    "EMERALD": 6,
+    "DIAMOND": 7,
+    "MASTER": 8,
+    "GRANDMASTER": 9,
+    "CHALLENGER": 10,
+}
+RANK_DIVISIONI = {
+    "IV": 4,
+    "III": 3,
+    "II": 2,
+    "I": 1,
+}
+TIER_SENZA_DIVISIONE = {"MASTER", "GRANDMASTER", "CHALLENGER"}
+APEX_TIER_BASE_SCORE = {
+    "MASTER": 29,
+    "GRANDMASTER": 30,
+    "CHALLENGER": 31,
+}
+
 
 def routing_region_for_platform(platform_region: str) -> str:
     region = platform_region.upper()

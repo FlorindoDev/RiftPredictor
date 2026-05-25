@@ -5,31 +5,36 @@ from typing import Any
 from riotwatcher import LolWatcher
 
 from ..client_riot import RiotConfig, create_client, load_config
+from ..client_riot.constants import (
+    APEX_TIER_BASE_SCORE,
+    RANK_DIVISIONI,
+    RANK_TIERS,
+    TIER_SENZA_DIVISIONE,
+)
 from ..models.giocatore import Giocatore
 from ..models.squadra import Squadra
 
 
-RANK_TIERS = {
-    "IRON": 1,
-    "BRONZE": 2,
-    "SILVER": 3,
-    "GOLD": 4,
-    "PLATINUM": 5,
-    "EMERALD": 6,
-    "DIAMOND": 7,
-    "MASTER": 8,
-    "GRANDMASTER": 9,
-    "CHALLENGER": 10,
-}
+def rank_score_for_entry(
+    tier: str,
+    divisione: str,
+    league_points: Any,
+) -> float | None:
+    try:
+        league_points_value = int(league_points)
+    except (TypeError, ValueError):
+        league_points_value = 0
 
-RANK_DIVISIONI = {
-    "IV": 4,
-    "III": 3,
-    "II": 2,
-    "I": 1,
-}
+    if tier in APEX_TIER_BASE_SCORE:
+        return round(APEX_TIER_BASE_SCORE[tier] + (league_points_value / 100), 2)
 
-_TIER_SENZA_DIVISIONE = {"MASTER", "GRANDMASTER", "CHALLENGER"}
+    tier_numero = RANK_TIERS.get(tier, 0)
+    divisione_numero = RANK_DIVISIONI.get(divisione, 0)
+    if not tier_numero or not divisione_numero:
+        return None
+
+    base_score = ((tier_numero - 1) * 4) + (5 - divisione_numero)
+    return round(base_score + (league_points_value / 100), 2)
 
 
 class RiotPlayerService:
@@ -89,13 +94,16 @@ class RiotPlayerService:
             divisione = entry.get("rank", "")
             tier_numero = RANK_TIERS.get(tier, 0)
             divisione_numero = RANK_DIVISIONI.get(divisione, 0)
+            league_points = entry.get("leaguePoints", 0)
 
-            if not divisione_numero and tier in _TIER_SENZA_DIVISIONE:
+            if not divisione_numero and tier in TIER_SENZA_DIVISIONE:
                 divisione_numero = 1
 
-            rank = 0
-            if tier_numero and divisione_numero:
-                rank = ((tier_numero - 1) * 4) + (5 - divisione_numero)
+            rank_score = rank_score_for_entry(
+                tier=tier,
+                divisione=divisione,
+                league_points=league_points,
+            )
 
             wins = entry.get("wins", 0)
             losses = entry.get("losses", 0)
@@ -106,9 +114,12 @@ class RiotPlayerService:
                 "tier_numero": tier_numero,
                 "divisione": divisione_numero,
                 "divisione_nome": divisione,
-                "rank": rank,
+                "rank": rank_score,
+                "rank_score": rank_score,
+                "is_ranked": rank_score is not None,
+                "rank_missing": rank_score is None,
                 "rank_nome": f"{tier} {divisione}".strip(),
-                "league_points": entry.get("leaguePoints", 0),
+                "league_points": league_points,
                 "wins": wins,
                 "losses": losses,
                 "data": entry,

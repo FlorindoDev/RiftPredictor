@@ -101,6 +101,13 @@ class MatchFeaturesService:
         team_player_key = (
             "blue_players_info" if team.team_id == 100 else "red_players_info"
         )
+        team_rank_key = "blue_rank" if team.team_id == 100 else "red_rank"
+        ranked_count = sum(
+            1
+            for rank_difference in rank_differences
+            if rank_difference[team_rank_key] is not None
+        )
+        rank_missing_count = len(rank_differences) - ranked_count
         team_recent_stats = self._get_recent_stats_by_player_key(
             rank_differences,
             team_player_key,
@@ -136,6 +143,8 @@ class MatchFeaturesService:
             "win": team.win,
             "avg_winrate": avg_team_winrate,
             "avg_kda": avg_team_kda,
+            "ranked_count": ranked_count,
+            "rank_missing_count": rank_missing_count,
             "composition": composition,
         }
 
@@ -147,15 +156,29 @@ class MatchFeaturesService:
                 {
                     "avg_player_team_minus_enemy": None,
                     "avg_blue_minus_red": None,
+                    "rank_comparison_count": 0,
                     "rank_differences": [],
                 }
             )
             return features
 
-        avg_blue_minus_red = mean(
+        valid_rank_differences = [
             rank_difference["rank_difference"]
             for rank_difference in rank_differences
-        )
+            if rank_difference["rank_difference"] is not None
+        ]
+        if not valid_rank_differences:
+            features.update(
+                {
+                    "avg_player_team_minus_enemy": None,
+                    "avg_blue_minus_red": None,
+                    "rank_comparison_count": 0,
+                    "rank_differences": rank_differences,
+                }
+            )
+            return features
+
+        avg_blue_minus_red = mean(valid_rank_differences)
         avg_player_team_minus_enemy = (
             avg_blue_minus_red if team.team_id == 100 else -avg_blue_minus_red
         )
@@ -163,6 +186,7 @@ class MatchFeaturesService:
             {
                 "avg_player_team_minus_enemy": round(avg_player_team_minus_enemy, 2),
                 "avg_blue_minus_red": round(avg_blue_minus_red, 2),
+                "rank_comparison_count": len(valid_rank_differences),
                 "rank_differences": rank_differences,
             }
         )

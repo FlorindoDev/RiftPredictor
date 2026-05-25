@@ -49,6 +49,7 @@ class MatchStatsService:
         queue_type: str = "RANKED_SOLO_5x5",
         players_recent_stats: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        
         player = squadra.get_player_by_lane(lane)
         ranked_info = self.riot_player_service.get_info_player(
             player,
@@ -57,12 +58,15 @@ class MatchStatsService:
         recent_stats = None
         if players_recent_stats is not None:
             recent_stats = players_recent_stats.get(player.puuid)
+
         player_info = self._build_player_info(ranked_info, recent_stats)
+        rank_score = ranked_info["rank_score"] if ranked_info else None
 
         return {
             "lane": lane.upper(),
             "player": player,
-            "rank": ranked_info["rank"] if ranked_info else 0,
+            "rank": rank_score,
+            "rank_missing": rank_score is None,
             "player_info": player_info,
         }
 
@@ -86,13 +90,17 @@ class MatchStatsService:
             players_recent_stats=players_recent_stats,
         )
 
+        rank_difference = None
+        if blue_rank["rank"] is not None and red_rank["rank"] is not None:
+            rank_difference = round(blue_rank["rank"] - red_rank["rank"], 2)
+
         return {
             "lane": lane.upper(),
             "blue_player": blue_rank["player"],
             "red_player": red_rank["player"],
             "blue_rank": blue_rank["rank"],
             "red_rank": red_rank["rank"],
-            "rank_difference": blue_rank["rank"] - red_rank["rank"],
+            "rank_difference": rank_difference,
             "blue_players_info": blue_rank["player_info"],
             "red_players_info": red_rank["player_info"],
         }
@@ -118,11 +126,17 @@ class MatchStatsService:
         self,
         ranked_info: dict[str, Any] | None,
         recent_stats: dict[str, Any] | None,
-    ) -> dict[str, Any] | None:
-        if ranked_info is None and recent_stats is None:
-            return None
-
-        player_info = dict(ranked_info) if ranked_info else {}
+    ) -> dict[str, Any]:
+        player_info = (
+            dict(ranked_info)
+            if ranked_info
+            else {
+                "rank": None,
+                "rank_score": None,
+                "is_ranked": False,
+                "rank_missing": True,
+            }
+        )
         if recent_stats is not None:
             player_info.update(
                 {
