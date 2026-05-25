@@ -114,7 +114,6 @@ class RiotPlayerService:
                 "tier_numero": tier_numero,
                 "divisione": divisione_numero,
                 "divisione_nome": divisione,
-                "rank": rank_score,
                 "rank_score": rank_score,
                 "is_ranked": rank_score is not None,
                 "rank_missing": rank_score is None,
