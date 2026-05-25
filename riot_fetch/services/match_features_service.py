@@ -38,8 +38,7 @@ class MatchFeaturesService:
         )
         rank_differences = self.match_stats_service.get_lane_rank_differences(
             match,
-            players_recent_stats=players_recent_stats,
-            queue_type=utente_service.player["queueType"]
+            queue_type=utente_service.player["queueType"],
         )
 
         features = {
@@ -52,11 +51,13 @@ class MatchFeaturesService:
             "team_features": self.build_team_features(
                 rank_differences=rank_differences,
                 team=player_team,
+                players_recent_stats=players_recent_stats,
                 include_rank_differences=True,
             ),
             "enemy_features": self.build_team_features(
                 rank_differences=rank_differences,
                 team=enemy_team,
+                players_recent_stats=players_recent_stats,
             ),
         }
 
@@ -96,11 +97,9 @@ class MatchFeaturesService:
         self,
         rank_differences: list[dict[str, Any]],
         team: Squadra,
+        players_recent_stats: dict[str, dict[str, Any]],
         include_rank_differences: bool = False,
     ) -> dict[str, Any]:
-        team_player_key = (
-            "blue_players_info" if team.team_id == 100 else "red_players_info"
-        )
         team_rank_key = "blue_rank" if team.team_id == 100 else "red_rank"
         ranked_count = sum(
             1
@@ -108,9 +107,9 @@ class MatchFeaturesService:
             if rank_difference[team_rank_key] is not None
         )
         rank_missing_count = len(rank_differences) - ranked_count
-        team_recent_stats = self._get_recent_stats_by_player_key(
-            rank_differences,
-            team_player_key,
+        team_recent_stats = self._get_recent_stats_for_team(
+            team=team,
+            players_recent_stats=players_recent_stats,
         )
         team_winrates = [
             recent_stats["winrate"] for recent_stats in team_recent_stats
@@ -124,20 +123,23 @@ class MatchFeaturesService:
         composition = self.match_stats_service.riot_player_service.get_team_composition(
             team
         )
-        team_players_info_by_lane = self._get_team_players_info_by_lane(
-            rank_differences,
-            team_player_key,
-        )
+        team_players_by_lane = {
+            player.team_position.upper(): player for player in team.giocatori
+        }
 
         for player_features in composition:
-            player_info = team_players_info_by_lane.get(
+            player = team_players_by_lane.get(
                 player_features["team_position"].upper()
             )
-            if player_info is None:
+            if player is None:
                 continue
 
-            player_features["kda"] = player_info.get("avg_kda", 0)
-            player_features["winrate"] = player_info.get("winrate", 0)
+            recent_stats = players_recent_stats.get(player.puuid)
+            if recent_stats is None:
+                continue
+
+            player_features["kda"] = recent_stats.get("avg_kda", 0)
+            player_features["winrate"] = recent_stats.get("winrate", 0)
 
         features = {
             "win": team.win,
@@ -193,35 +195,16 @@ class MatchFeaturesService:
 
         return features
 
-    def _get_team_players_info_by_lane(
+    def _get_recent_stats_for_team(
         self,
-        rank_differences: list[dict[str, Any]],
-        player_key: str,
-    ) -> dict[str, dict[str, Any]]:
-        team_players_info_by_lane = {}
-        for rank_difference in rank_differences:
-            player_info = rank_difference[player_key]
-            if player_info is not None:
-                team_players_info_by_lane[rank_difference["lane"]] = player_info
-
-        return team_players_info_by_lane
-
-    def _get_recent_stats_by_player_key(
-        self,
-        rank_differences: list[dict[str, Any]],
-        player_key: str,
+        team: Squadra,
+        players_recent_stats: dict[str, dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        recent_stats_by_player = []
-        for rank_difference in rank_differences:
-            player_info = rank_difference[player_key]
-            if player_info is None:
-                continue
-
-            recent_stats = player_info.get("recent_stats")
-            if recent_stats is not None:
-                recent_stats_by_player.append(recent_stats)
-
-        return recent_stats_by_player
+        return [
+            recent_stats
+            for player in team.giocatori
+            if (recent_stats := players_recent_stats.get(player.puuid)) is not None
+        ]
 
     def build_personal_features(
         self,

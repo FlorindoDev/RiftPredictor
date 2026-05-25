@@ -47,19 +47,12 @@ class MatchStatsService:
         squadra: Squadra,
         lane: str,
         queue_type: str = "RANKED_SOLO_5x5",
-        players_recent_stats: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        
         player = squadra.get_player_by_lane(lane)
         ranked_info = self.riot_player_service.get_info_player(
             player,
             queue_type=queue_type,
         )
-        recent_stats = None
-        if players_recent_stats is not None:
-            recent_stats = players_recent_stats.get(player.puuid)
-
-        player_info = self._build_player_info(ranked_info, recent_stats)
         rank_score = ranked_info["rank_score"] if ranked_info else None
 
         return {
@@ -67,7 +60,6 @@ class MatchStatsService:
             "player": player,
             "rank": rank_score,
             "rank_missing": rank_score is None,
-            "player_info": player_info,
         }
 
     def get_lane_rank_difference(
@@ -75,19 +67,16 @@ class MatchStatsService:
         match: Match,
         lane: str,
         queue_type: str = "RANKED_SOLO_5x5",
-        players_recent_stats: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         blue_rank = self.get_rank_player_by_lane(
             squadra=match.squadra_blu,
             lane=lane,
             queue_type=queue_type,
-            players_recent_stats=players_recent_stats,
         )
         red_rank = self.get_rank_player_by_lane(
             squadra=match.squadra_rossa,
             lane=lane,
             queue_type=queue_type,
-            players_recent_stats=players_recent_stats,
         )
 
         rank_difference = None
@@ -101,8 +90,6 @@ class MatchStatsService:
             "blue_rank": blue_rank["rank"],
             "red_rank": red_rank["rank"],
             "rank_difference": rank_difference,
-            "blue_players_info": blue_rank["player_info"],
-            "red_players_info": red_rank["player_info"],
         }
 
     def get_lane_rank_differences(
@@ -110,41 +97,12 @@ class MatchStatsService:
         match: Match,
         lanes: tuple[str, ...] = DEFAULT_LANES,
         queue_type: str = "RANKED_SOLO_5x5",
-        players_recent_stats: dict[str, dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         return [
             self.get_lane_rank_difference(
                 match=match,
                 lane=lane,
                 queue_type=queue_type,
-                players_recent_stats=players_recent_stats,
             )
             for lane in lanes
         ]
-
-    def _build_player_info(
-        self,
-        ranked_info: dict[str, Any] | None,
-        recent_stats: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        player_info = (
-            dict(ranked_info)
-            if ranked_info
-            else {
-                "rank": None,
-                "rank_score": None,
-                "is_ranked": False,
-                "rank_missing": True,
-            }
-        )
-        if recent_stats is not None:
-            player_info.update(
-                {
-                    "recent_stats": recent_stats,
-                    "avg_kda": recent_stats["avg_kda"],
-                    "winrate": recent_stats["winrate"],
-                    "recent_winrate": recent_stats["winrate"],
-                }
-            )
-
-        return player_info
