@@ -9,7 +9,7 @@ from ..models.squadra import Squadra
 from .match_stats_service import MatchStatsService
 from .utente_service import UtenteService
 
-#TODO: riffallo bene 
+# TODO: riffallo bene
 
 RECENT_MATCH_COUNT = 10
 
@@ -32,6 +32,7 @@ class MatchFeaturesService:
     ) -> dict[str, Any]:
         player_team = match.get_squadra_by_puuid(puuid)
         enemy_team = match.get_squadra_avversaria(player_team)
+
         players_recent_stats = self.build_players_recent_stats(
             utente_service=utente_service,
             match=match,
@@ -101,101 +102,167 @@ class MatchFeaturesService:
         players_recent_stats: dict[str, dict[str, Any]],
         include_rank_differences: bool = False,
     ) -> dict[str, Any]:
-        team_rank_key = "blue_rank" if team.team_id == 100 else "red_rank"
-        ranked_count = sum(
-            1
-            for rank_difference in rank_differences
-            if rank_difference[team_rank_key] is not None
-        )
-        rank_missing_count = len(rank_differences) - ranked_count
-        team_recent_stats = self._get_recent_stats_for_team(
+        features = self._build_base_team_features(
+            rank_differences=rank_differences,
             team=team,
             players_recent_stats=players_recent_stats,
         )
-        team_winrates = [
-            recent_stats["winrate"] for recent_stats in team_recent_stats
-        ]
-        team_kdas = [
-            recent_stats["avg_kda"] for recent_stats in team_recent_stats
-        ]
 
-        avg_team_winrate = round(mean(team_winrates), 2) if team_winrates else 0
-        avg_team_kda = round(mean(team_kdas), 2) if team_kdas else 0
-        composition = self.match_stats_service.riot_player_service.get_team_composition(
-            team
-        )
-        team_players_by_lane = {
-            player.team_position.upper(): player for player in team.giocatori
-        }
-
-        for player_features in composition:
-            player = team_players_by_lane.get(
-                player_features["team_position"].upper()
+        if include_rank_differences:
+            features.update(
+                self._build_rank_difference_features(
+                    team_id=team.team_id,
+                    rank_differences=rank_differences,
+                )
             )
-            if player is None:
-                continue
 
-            recent_stats = players_recent_stats.get(player.puuid)
-            if recent_stats is None:
-                continue
+        return features
 
-            player_features["kda"] = recent_stats.get("avg_kda", 0)
-            player_features["winrate"] = recent_stats.get("winrate", 0)
+    def _build_base_team_features(
+        self,
+        rank_differences: list[dict[str, Any]],
+        team: Squadra,
+        players_recent_stats: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        ranked_count, rank_missing_count = self._get_team_rank_counts(
+            team=team,
+            rank_differences=rank_differences,
+        )
+        avg_team_winrate, avg_team_kda = self._get_team_recent_averages(
+            team=team,
+            players_recent_stats=players_recent_stats,
+        )
 
-        features = {
+        return {
             "team_id": team.team_id,
             "win": team.win,
             "avg_winrate": avg_team_winrate,
             "avg_kda": avg_team_kda,
             "ranked_count": ranked_count,
             "rank_missing_count": rank_missing_count,
-            "composition": composition,
+            "composition": self._build_team_composition(
+                team=team,
+                players_recent_stats=players_recent_stats,
+            ),
         }
 
-        if not include_rank_differences:
-            return features
+    def _get_team_rank_counts(
+        self,
+        team: Squadra,
+        rank_differences: list[dict[str, Any]],
+    ) -> tuple[int, int]:
+        team_rank_key = "blue_rank" if team.team_id == 100 else "red_rank"
+        ranked_count = sum(
+            1
+            for rank_difference in rank_differences
+            if rank_difference[team_rank_key] is not None
+        )
 
-        if not rank_differences:
-            features.update(
-                {
-                    "avg_player_team_minus_enemy": None,
-                    "avg_blue_minus_red": None,
-                    "rank_comparison_count": 0,
-                    "rank_differences": [],
-                }
+        return ranked_count, len(rank_differences) - ranked_count
+
+    def _get_team_recent_averages(
+        self,
+        team: Squadra,
+        players_recent_stats: dict[str, dict[str, Any]],
+    ) -> tuple[float, float]:
+        team_recent_stats = self._get_recent_stats_for_team(
+            team=team,
+            players_recent_stats=players_recent_stats,
+        )
+
+        return (
+            self._average_recent_stat(team_recent_stats, "winrate"),
+            self._average_recent_stat(team_recent_stats, "avg_kda"),
+        )
+
+    @staticmethod
+    def _average_recent_stat(
+        team_recent_stats: list[dict[str, Any]],
+        stat_name: str,
+    ) -> float:
+        stat_values = [recent_stats[stat_name] for recent_stats in team_recent_stats]
+        return round(mean(stat_values), 2) if stat_values else 0
+
+    def _build_team_composition(
+        self,
+        team: Squadra,
+        players_recent_stats: dict[str, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        recent_stats_by_lane = self._get_recent_stats_by_lane(
+            team=team,
+            players_recent_stats=players_recent_stats,
+        )
+        composition = self.match_stats_service.riot_player_service.get_team_composition(
+            team
+        )
+
+        return [
+            self._add_recent_stats_to_player_features(
+                player_features=player_features,
+                recent_stats_by_lane=recent_stats_by_lane,
             )
-            return features
+            for player_features in composition
+        ]
 
+    def _get_recent_stats_by_lane(
+        self,
+        team: Squadra,
+        players_recent_stats: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any] | None]:
+        return {
+            player.team_position.upper(): players_recent_stats.get(player.puuid)
+            for player in team.giocatori
+        }
+
+    @staticmethod
+    def _add_recent_stats_to_player_features(
+        player_features: dict[str, Any],
+        recent_stats_by_lane: dict[str, dict[str, Any] | None],
+    ) -> dict[str, Any]:
+        recent_stats = recent_stats_by_lane.get(
+            player_features["team_position"].upper()
+        )
+        if recent_stats is None:
+            return player_features
+
+        return {
+            **player_features,
+            "kda": recent_stats.get("avg_kda", 0),
+            "winrate": recent_stats.get("winrate", 0),
+        }
+
+    @staticmethod
+    def _build_rank_difference_features(
+        team_id: int,
+        rank_differences: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        
+        
         valid_rank_differences = [
             rank_difference["rank_difference"]
             for rank_difference in rank_differences
             if rank_difference["rank_difference"] is not None
         ]
+
         if not valid_rank_differences:
-            features.update(
-                {
-                    "avg_player_team_minus_enemy": None,
-                    "avg_blue_minus_red": None,
-                    "rank_comparison_count": 0,
-                    "rank_differences": rank_differences,
-                }
-            )
-            return features
+            return {
+                "avg_player_team_minus_enemy": None,
+                "avg_blue_minus_red": None,
+                "rank_comparison_count": 0,
+                "rank_differences": rank_differences,
+            }
 
         avg_blue_minus_red = mean(valid_rank_differences)
         avg_player_team_minus_enemy = (
-            avg_blue_minus_red if team.team_id == 100 else -avg_blue_minus_red
-        )
-        features.update(
-            {
-                "avg_player_team_minus_enemy": round(avg_player_team_minus_enemy, 2),
-                "avg_blue_minus_red": round(avg_blue_minus_red, 2),
-                "rank_comparison_count": len(valid_rank_differences),
-                "rank_differences": rank_differences,
-            }
+            avg_blue_minus_red if team_id == 100 else -avg_blue_minus_red
         )
 
-        return features
+        return {
+            "avg_player_team_minus_enemy": round(avg_player_team_minus_enemy, 2),
+            "avg_blue_minus_red": round(avg_blue_minus_red, 2),
+            "rank_comparison_count": len(valid_rank_differences),
+            "rank_differences": rank_differences,
+        }
 
     def _get_recent_stats_for_team(
         self,
