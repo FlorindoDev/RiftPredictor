@@ -9,7 +9,6 @@ from ..models.squadra import Squadra
 from .match_stats_service import MatchStatsService
 from .utente_service import UtenteService
 
-# TODO: riffallo bene
 
 RECENT_MATCH_COUNT = 10
 
@@ -237,7 +236,7 @@ class MatchFeaturesService:
         rank_differences: list[dict[str, Any]],
     ) -> dict[str, Any]:
         
-        
+
         valid_rank_differences = [
             rank_difference["rank_difference"]
             for rank_difference in rank_differences
