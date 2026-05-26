@@ -17,6 +17,8 @@ from riot_fetch.services.riot_player_service import RiotPlayerService
 from riot_fetch.services.utente_service import UtenteService
 
 
+#TODO: riffallo bene 
+
 DATA_DIR = (
     PROJECT_ROOT
     / "data"
@@ -27,10 +29,29 @@ DATA_DIR = (
 CSV_PATH = PROJECT_ROOT / "data" / "match_features.csv"
 TEAM_POSITIONS = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
+
+def build_lane_rank_fieldnames() -> list[str]:
+    fieldnames = []
+    for position in TEAM_POSITIONS:
+        column_prefix = position.lower()
+        fieldnames.extend(
+            [
+                f"ally_{column_prefix}_rank_score",
+                f"enemy_{column_prefix}_rank_score",
+                f"{column_prefix}_rank_difference_player_team_vs_enemy",
+            ]
+        )
+
+    return fieldnames
+
+
+LANE_RANK_FIELDNAMES = build_lane_rank_fieldnames()
+
 CSV_FIELDNAMES = [
     "match_id",
     "puuid",
     "avg_rank_difference_player_team_vs_enemy",
+    *LANE_RANK_FIELDNAMES,
     "avg_player_team_winrate",
     "avg_enemy_winrate",
     "ally_ranked_count",
@@ -84,6 +105,34 @@ def load_match_files() -> list[tuple[Path, dict[str, Any]]]:
     return files
 
 
+def add_lane_rank_features(
+    row: dict[str, Any],
+    team_features: dict[str, Any],
+) -> None:
+    ally_rank_key = "blue_rank" if team_features["team_id"] == 100 else "red_rank"
+    enemy_rank_key = "red_rank" if team_features["team_id"] == 100 else "blue_rank"
+    rank_differences_by_lane = {
+        rank_difference["lane"].upper(): rank_difference
+        for rank_difference in team_features.get("rank_differences", [])
+    }
+
+    for position in TEAM_POSITIONS:
+        column_prefix = position.lower()
+        rank_difference = rank_differences_by_lane.get(position, {})
+        ally_rank = rank_difference.get(ally_rank_key)
+        enemy_rank = rank_difference.get(enemy_rank_key)
+        lane_rank_difference = None
+
+        if ally_rank is not None and enemy_rank is not None:
+            lane_rank_difference = round(ally_rank - enemy_rank, 2)
+
+        row[f"ally_{column_prefix}_rank_score"] = ally_rank
+        row[f"enemy_{column_prefix}_rank_score"] = enemy_rank
+        row[
+            f"{column_prefix}_rank_difference_player_team_vs_enemy"
+        ] = lane_rank_difference
+
+
 def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
     personal_features = features["personal_features"]
     team_features = features["team_features"]
@@ -103,6 +152,8 @@ def build_csv_row(features: dict[str, Any]) -> dict[str, Any]:
         "enemy_rank_missing_count": enemy_features["rank_missing_count"],
         "target": team_features["win"],
     }
+
+    add_lane_rank_features(row, team_features)
 
     allies_by_position = {
         ally["team_position"].upper(): ally

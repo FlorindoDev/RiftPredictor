@@ -143,6 +143,7 @@ class MatchFeaturesService:
             player_features["winrate"] = recent_stats.get("winrate", 0)
 
         features = {
+            "team_id": team.team_id,
             "win": team.win,
             "avg_winrate": avg_team_winrate,
             "avg_kda": avg_team_kda,
