@@ -63,7 +63,7 @@ class MatchFeaturesService:
         }
 
         if file_path is not None:
-            features["file_path"] = file_path
+            features["file_path"] = str(file_path)
 
         return features
 
@@ -291,7 +291,7 @@ class MatchFeaturesService:
         return {
             "match_id": match.match_id,
             "puuid": puuid,
-            "player": player,
+            "team_position": player.team_position,
             "champion_id": player.champion_id,
             "recent_match_count": self.recent_match_count,
             "recent_stats": recent_stats,

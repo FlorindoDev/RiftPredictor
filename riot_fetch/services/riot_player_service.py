@@ -73,7 +73,6 @@ class RiotPlayerService:
                 {
                     "team_position": giocatore.team_position,
                     "champion_id": giocatore.champion_id,
-                    "role": giocatore.role,
                 }
             )
 

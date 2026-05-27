@@ -160,7 +160,7 @@ def main() -> dict[str, Any]:
                     puuid=puuid,
                     file_path=file_path,
                 )
-                print(features)
+                print(json.dumps(features, indent=2, ensure_ascii=False, default=str))
             except (KeyError, TypeError, ValueError) as exc:
                 skipped_matches += 1
                 print(f"Skip match {match_id}: dati mancanti o invalidi ({exc})")

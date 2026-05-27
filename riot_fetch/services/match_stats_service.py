@@ -85,8 +85,6 @@ class MatchStatsService:
 
         return {
             "lane": lane.upper(),
-            "blue_player": blue_rank["player"],
-            "red_player": red_rank["player"],
             "blue_rank": blue_rank["rank"],
             "red_rank": red_rank["rank"],
             "rank_difference": rank_difference,
