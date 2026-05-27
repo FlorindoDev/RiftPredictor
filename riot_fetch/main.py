@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import sys
 from pathlib import Path
@@ -41,6 +42,34 @@ def load_match_files() -> list[tuple[Path, dict[str, Any]]]:
     return files
 
 
+def load_csv_resume_point(csv_path: Path = CSV_PATH) -> dict[str, str] | None:
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        return None
+
+    with csv_path.open("r", encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if not reader.fieldnames:
+            return None
+
+        missing_columns = {"match_id", "puuid"} - set(reader.fieldnames)
+        if missing_columns:
+            missing = ", ".join(sorted(missing_columns))
+            raise ValueError(f"Colonne mancanti nel CSV {csv_path}: {missing}")
+
+        last_row = None
+        for row in reader:
+            if row.get("match_id") and row.get("puuid"):
+                last_row = row
+
+    if last_row is None:
+        return None
+
+    return {
+        "match_id": last_row["match_id"],
+        "puuid": last_row["puuid"],
+    }
+
+
 def main() -> dict[str, Any]:
     config = load_config()
     client = create_client(config)
@@ -59,6 +88,16 @@ def main() -> dict[str, Any]:
     processed_matches = 0
     skipped_files = 0
     skipped_matches = 0
+    resume_skipped_files = 0
+    resume_skipped_matches = 0
+
+    resume_point = load_csv_resume_point()
+    resume_found = resume_point is None
+    if resume_point is not None:
+        print(
+            "Ripresa CSV da "
+            f"puuid={resume_point['puuid']} match_id={resume_point['match_id']}"
+        )
 
     for file_path, data in load_match_files():
         try:
@@ -67,10 +106,42 @@ def main() -> dict[str, Any]:
                 continue
 
             puuid = data["puuid"]
+            player = data["player"]
+            match_query = data.get("match_query", {})
+        except (KeyError, TypeError) as exc:
+            skipped_files += 1
+            print(f"Skip file {file_path}: dati mancanti o invalidi ({exc})")
+            continue
+
+        start_match_index = 0
+        if not resume_found:
+            if puuid != resume_point["puuid"]:
+                resume_skipped_files += 1
+                continue
+
+            resume_found = True
+            try:
+                start_match_index = match_ids.index(resume_point["match_id"]) + 1
+            except ValueError as exc:
+                raise ValueError(
+                    "Match dell'ultima riga CSV non trovato nel file del player "
+                    f"{file_path}: {resume_point['match_id']}"
+                ) from exc
+
+            resume_skipped_matches += start_match_index
+            print(
+                f"Riparto da {file_path}: "
+                f"saltati {start_match_index} match gia' scritti."
+            )
+
+        if start_match_index >= len(match_ids):
+            continue
+
+        try:
             utente_service = UtenteService(
-                player=data["player"],
+                player=player,
                 match_ids=match_ids,
-                match_query=data.get("match_query", {}),
+                match_query=match_query,
                 config=config,
                 client=client,
                 match_stats_service=match_stats_service,
@@ -80,7 +151,7 @@ def main() -> dict[str, Any]:
             print(f"Skip file {file_path}: dati mancanti o invalidi ({exc})")
             continue
 
-        for match_id in match_ids:
+        for match_id in match_ids[start_match_index:]:
             try:
                 match = match_stats_service.get_match(match_id)
                 features = match_features_service.build_features(
@@ -89,7 +160,7 @@ def main() -> dict[str, Any]:
                     puuid=puuid,
                     file_path=file_path,
                 )
-                print(features)
+                print(json.dumps(features, indent=2, ensure_ascii=False))
             except (KeyError, TypeError, ValueError) as exc:
                 skipped_matches += 1
                 print(f"Skip match {match_id}: dati mancanti o invalidi ({exc})")
@@ -106,11 +177,19 @@ def main() -> dict[str, Any]:
 
         processed_files += 1
 
+    if not resume_found:
+        raise ValueError(
+            "Player dell'ultima riga CSV non trovato nei file sorgente: "
+            f"{resume_point['puuid']}"
+        )
+
     return {
         "processed_files": processed_files,
         "processed_matches": processed_matches,
         "skipped_files": skipped_files,
         "skipped_matches": skipped_matches,
+        "resume_skipped_files": resume_skipped_files,
+        "resume_skipped_matches": resume_skipped_matches,
         "csv_path": CSV_PATH,
     }
 
